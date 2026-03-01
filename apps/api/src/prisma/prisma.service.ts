@@ -7,11 +7,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     constructor() {
         super({
-            datasources: {
-                db: {
-                    url: process.env.DATABASE_URL,
-                },
-            },
             log: process.env.NODE_ENV === 'development'
                 ? [
                     { emit: 'stdout', level: 'query' },
