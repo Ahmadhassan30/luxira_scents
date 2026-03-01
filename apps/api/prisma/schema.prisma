@@ -3,13 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  // In dev: points directly to local PostgreSQL :5432
-  // In prod: url points to PgBouncer :6432 (fast pooled queries)
-  //          directUrl points directly to PostgreSQL :5432 (used by prisma migrate — bypasses PgBouncer
-  //          because transaction pooling mode does not support the session-level commands migrations use)
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_DIRECT_URL")
+  provider = "postgresql"
+  // Prisma v7+: url and directUrl are no longer set here.
+  // - Runtime URL (PgBouncer in prod): read from DATABASE_URL by PrismaService constructor
+  // - Migrate URL (direct PostgreSQL):  set in prisma.config.ts → datasource.url = DATABASE_DIRECT_URL
 }
 
 enum Role {

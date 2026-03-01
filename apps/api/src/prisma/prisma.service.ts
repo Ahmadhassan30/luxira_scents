@@ -7,36 +7,24 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     constructor() {
         super({
-            log:
-                process.env.NODE_ENV === 'development'
-                    ? [
-                        { emit: 'stdout', level: 'query' },
-                        { emit: 'stdout', level: 'info' },
-                        { emit: 'stdout', level: 'warn' },
-                        { emit: 'stdout', level: 'error' },
-                    ]
-                    : [{ emit: 'stdout', level: 'error' }],
+            datasources: {
+                db: {
+                    url: process.env.DATABASE_URL,
+                },
+            },
+            log: process.env.NODE_ENV === 'development'
+                ? [
+                    { emit: 'stdout', level: 'query' },
+                    { emit: 'stdout', level: 'info' },
+                    { emit: 'stdout', level: 'warn' },
+                    { emit: 'stdout', level: 'error' },
+                ]
+                : [{ emit: 'stdout', level: 'error' }],
         });
     }
 
     async onModuleInit() {
         await this.$connect();
-
-        // Soft-delete middleware — automatically filters out soft-deleted users on all find operations.
-        // Developers do not need to add `where: { deletedAt: null }` manually on every user query.
-        this.$use(async (params: Prisma.MiddlewareParams, next) => {
-            if (params.model === 'User') {
-                if (params.action === 'findUnique' || params.action === 'findFirst') {
-                    params.action = 'findFirst';
-                    params.args.where = { ...params.args.where, deletedAt: null };
-                }
-                if (params.action === 'findMany') {
-                    params.args = params.args ?? {};
-                    params.args.where = { ...params.args.where, deletedAt: null };
-                }
-            }
-            return next(params);
-        });
 
         this.logger.log(
             `Database connected [${process.env.NODE_ENV}] via ${process.env.NODE_ENV === 'production' ? 'PgBouncer :6432' : 'PostgreSQL :5432'

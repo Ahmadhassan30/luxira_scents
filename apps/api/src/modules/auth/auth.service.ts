@@ -25,7 +25,7 @@ export class AuthService {
     ) { }
 
     async register(dto: RegisterDto) {
-        const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        const existing = await this.prisma.user.findFirst({ where: { email: dto.email, deletedAt: null } });
         if (existing) throw new ConflictException('Email already in use');
 
         const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -44,7 +44,7 @@ export class AuthService {
     }
 
     async login(dto: LoginDto) {
-        const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        const user = await this.prisma.user.findFirst({ where: { email: dto.email, deletedAt: null } });
         if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
 
         const valid = await bcrypt.compare(dto.password, user.passwordHash);
@@ -65,8 +65,8 @@ export class AuthService {
         const valid = await bcrypt.compare(refreshToken, storedHash);
         if (!valid) throw new UnauthorizedException('Invalid refresh token');
 
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
+        const user = await this.prisma.user.findFirst({
+            where: { id: userId, deletedAt: null },
             select: { id: true, email: true, role: true },
         });
         if (!user) throw new NotFoundException('User not found');
@@ -80,7 +80,7 @@ export class AuthService {
     }
 
     async initiatePasswordReset(email: string) {
-        const user = await this.prisma.user.findUnique({ where: { email } });
+        const user = await this.prisma.user.findFirst({ where: { email, deletedAt: null } });
         // Always return success to prevent user enumeration
         if (!user) return;
 

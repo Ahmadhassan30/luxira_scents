@@ -16,9 +16,13 @@
         "noImplicitAny": true,
         "strictBindCallApply": true,
         "noFallthroughCasesInSwitch": true,
+        "jsx": "react",
         "paths": {
             "@perfume/shared": [
                 "../../packages/shared/src/index.ts"
+            ],
+            "@perfume/email-templates": [
+                "../../packages/email-templates/src/index.ts"
             ]
         }
     },

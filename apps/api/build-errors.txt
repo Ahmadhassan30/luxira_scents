@@ -1,0 +1,24 @@
+
+> @perfume/api@0.0.1 build C:\Users\Ahmads Machine\Desktop\luxira_scents\apps\api
+> nest build
+
+src/modules/mail/mail.service.ts:5:35 - error TS2307: Cannot find module '@perfume/email-templates' or its corresponding type declarations.
+
+5 import { OrderConfirmation } from '@perfume/email-templates';
+                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/modules/mail/mail.service.ts:65:52 - error TS2307: Cannot find module '@perfume/email-templates' or its corresponding type declarations.
+
+65             const { PasswordReset } = await import('@perfume/email-templates');
+                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/modules/mail/mail.service.ts:82:51 - error TS2307: Cannot find module '@perfume/email-templates' or its corresponding type declarations.
+
+82             const { WelcomeEmail } = await import('@perfume/email-templates');
+                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~
+src/prisma/prisma.service.ts:11:13 - error TS2353: Object literal may only specify known properties, and 'datasources' does not exist in type 'Subset<PrismaClientOptions, PrismaClientOptions>'.
+
+11             datasources: {
+               ~~~~~~~~~~~
+
+Found 4 error(s).
+
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

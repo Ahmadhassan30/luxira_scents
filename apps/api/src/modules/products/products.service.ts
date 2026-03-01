@@ -33,6 +33,8 @@ export class ProductsService {
         const orderBy = {
             newest: { createdAt: 'desc' as const },
             name_asc: { name: 'asc' as const },
+            price_asc: { price: 'asc' as const },
+            price_desc: { price: 'desc' as const },
         }[sortBy] ?? { createdAt: 'desc' as const };
 
         const [data, total] = await Promise.all([
