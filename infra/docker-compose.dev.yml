@@ -1,0 +1,40 @@
+version: '3.9'
+
+# Development: optional Docker Compose for local PostgreSQL + Redis
+# Most developers run these natively. Use this only if you prefer containerised DBs.
+# The app (NestJS + Next.js) runs natively with `npm run dev`.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: luxira_postgres_dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: perfume_store_dev
+    # Expose on localhost only — not accessible from other machines
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: luxira_redis_dev
+    # Expose on localhost only
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

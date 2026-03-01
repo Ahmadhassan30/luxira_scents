@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // In dev: points directly to local PostgreSQL :5432
+  // In prod: url points to PgBouncer :6432 (fast pooled queries)
+  //          directUrl points directly to PostgreSQL :5432 (used by prisma migrate — bypasses PgBouncer
+  //          because transaction pooling mode does not support the session-level commands migrations use)
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_DIRECT_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String?   @map("password_hash")
+  role         Role      @default(CUSTOMER)
+  firstName    String?   @map("first_name")
+  lastName     String?   @map("last_name")
+  phone        String?
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  orders        Order[]
+  addresses     Address[]
+  wishlistItems WishlistItem[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          String        @id @default(uuid())
+  name        String
+  slug        String        @unique
+  description String?
+  status      ProductStatus @default(DRAFT)
+  categoryId  String?       @map("category_id")
+  scentFamily String?       @map("scent_family")
+  gender      String?
+  topNotes    String[]      @map("top_notes")
+  middleNotes String[]      @map("middle_notes")
+  baseNotes   String[]      @map("base_notes")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  category      Category?      @relation(fields: [categoryId], references: [id])
+  variants      ProductVariant[]
+  images        ProductImage[]
+  orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id             String   @id @default(uuid())
+  productId      String   @map("product_id")
+  sizeMl         Int      @map("size_ml")
+  price          Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @map("compare_at_price") @db.Decimal(10, 2)
+  sku            String   @unique
+  stockQuantity  Int      @default(0) @map("stock_quantity")
+  isDefault      Boolean  @default(false) @map("is_default")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  url       String
+  altText   String?  @map("alt_text")
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  fullName   String   @map("full_name")
+  phone      String?
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String   @map("postal_code")
+  country    String
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orders Order[]
+
+  @@map("addresses")
+}
+
+model Order {
+  id                    String      @id @default(uuid())
+  // Human-readable order number: PS-YYYY-NNNNNN
+  // Generated using a PostgreSQL sequence via raw SQL in OrdersService.create()
+  // Never use application-level counters — only DB sequences are atomic under concurrency
+  orderNumber           String      @unique @map("order_number")
+  userId                String?     @map("user_id")
+  guestEmail            String?     @map("guest_email")
+  status                OrderStatus @default(PENDING)
+  subtotal              Decimal     @db.Decimal(10, 2)
+  discountAmount        Decimal     @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  shippingAmount        Decimal     @default(0) @map("shipping_amount") @db.Decimal(10, 2)
+  total                 Decimal     @db.Decimal(10, 2)
+  stripePaymentIntentId String?     @unique @map("stripe_payment_intent_id")
+  shippingAddressId     String?     @map("shipping_address_id")
+  couponId              String?     @map("coupon_id")
+  trackingNumber        String?     @map("tracking_number")
+  trackingCarrier       String?     @map("tracking_carrier")
+  notes                 String?
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shippingAddress Address?    @relation(fields: [shippingAddressId], references: [id])
+  coupon          Coupon?     @relation(fields: [couponId], references: [id])
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String  @id @default(uuid())
+  orderId          String  @map("order_id")
+  productId        String  @map("product_id")
+  productVariantId String  @map("product_variant_id")
+  quantity         Int
+  unitPrice        Decimal @map("unit_price") @db.Decimal(10, 2)
+  productName      String  @map("product_name")
+  variantLabel     String  @map("variant_label")
+
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}
+
+model Coupon {
+  id            String       @id @default(uuid())
+  code          String       @unique
+  type          DiscountType
+  value         Decimal      @db.Decimal(10, 2)
+  minOrderValue Decimal?     @map("min_order_value") @db.Decimal(10, 2)
+  usageLimit    Int?         @map("usage_limit")
+  usageCount    Int          @default(0) @map("usage_count")
+  expiresAt     DateTime?    @map("expires_at")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  orders Order[]
+
+  @@map("coupons")
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}

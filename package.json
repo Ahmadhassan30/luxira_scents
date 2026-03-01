@@ -1,0 +1,23 @@
+{
+    "name": "luxira-scents",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "turbo dev",
+        "build": "turbo build",
+        "lint": "turbo lint",
+        "type-check": "turbo type-check",
+        "test": "turbo test",
+        "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+    },
+    "devDependencies": {
+        "turbo": "latest",
+        "prettier": "^3.0.0",
+        "eslint": "^8.0.0",
+        "@typescript-eslint/eslint-plugin": "^6.0.0",
+        "@typescript-eslint/parser": "^6.0.0"
+    }
+}

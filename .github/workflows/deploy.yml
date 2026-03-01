@@ -1,0 +1,60 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  checks:
+    name: Type-check & lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: 'npm' }
+      - run: npm ci
+      - run: npx turbo type-check lint
+
+  deploy:
+    name: Deploy
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker build -f infra/docker/api.Dockerfile -t luxira-api:${{ github.sha }} .
+          docker build -f infra/docker/web.Dockerfile -t luxira-web:${{ github.sha }} .
+
+      - name: Push to registry
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ secrets.REGISTRY_URL }} -u ${{ secrets.REGISTRY_USER }} --password-stdin
+          docker tag luxira-api:${{ github.sha }} ${{ secrets.REGISTRY_URL }}/luxira-api:latest
+          docker tag luxira-web:${{ github.sha }} ${{ secrets.REGISTRY_URL }}/luxira-web:latest
+          docker push ${{ secrets.REGISTRY_URL }}/luxira-api:latest
+          docker push ${{ secrets.REGISTRY_URL }}/luxira-web:latest
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/luxira
+            git pull origin main
+            npm ci
+            npx turbo build
+
+            # Run Prisma migrations directly against PostgreSQL (not PgBouncer)
+            DATABASE_URL=$DATABASE_DIRECT_URL npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
+
+            pm2 reload infra/pm2/ecosystem.config.js --env production
+            pm2 save
+            echo "Deployment successful: $(date)"
